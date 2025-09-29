@@ -1,6 +1,8 @@
 import fitz  # PyMuPDF
 import glob
 import os
+import streamlit as st
+
 
 def destacar_nao_conforme(path_pdf):
     doc = fitz.open(path_pdf)
@@ -51,3 +53,19 @@ def processar_pasta(pasta):
 
 # exemplo de uso
 processar_pasta("pdfs_entrada/")
+
+st.image("logo.png", width=600)
+st.title("Alterar vermelho - Baltar Engenharia")
+
+uploaded_files = st.file_uploader("Escolha arquivos pdf", type=["pdf"], accept_multiple_files=True)
+
+if uploaded_files:
+    if st.button("Processar"):
+        zip_buffer = destacar_nao_conforme(uploaded_files)
+        st.success("Análise concluída!")
+        st.download_button(
+            label="📥 Baixar Resultados (ZIP)",
+            data=zip_buffer,
+            file_name="resultados_ultrassom.zip",
+            mime="application/zip"
+    )
