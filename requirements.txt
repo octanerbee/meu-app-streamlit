@@ -2,7 +2,6 @@ streamlit
 numpy
 matplotlib
 librosa
-io
 zipfile
 tempfile
 csv
