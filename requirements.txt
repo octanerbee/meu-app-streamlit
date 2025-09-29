@@ -1,0 +1,10 @@
+streamlit
+numpy
+matplotlib.pyplot
+librosa
+librosa.display
+os
+io
+zipfile
+tempfile
+csv
