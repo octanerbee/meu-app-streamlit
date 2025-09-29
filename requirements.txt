@@ -1,8 +1,7 @@
 streamlit
 numpy
-matplotlib.pyplot
+matplotlib
 librosa
-librosa.display
 os
 io
 zipfile
