@@ -3,3 +3,5 @@ numpy
 matplotlib
 librosa
 pymupdf
+pandas
+openpyxl
