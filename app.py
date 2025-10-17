@@ -1,5 +1,5 @@
 import streamlit as st
-from scripts import ultrassomapp, vermelhoapp, planilha
+from scripts import ultrassomapp, vermelhoapp, planilha, indiceapp
 
 
 st.image("logo.png", width=600)
@@ -9,7 +9,7 @@ st.sidebar.title("Menu")
 
 opcao = st.sidebar.selectbox(
     "Escolha uma ferramenta:",
-    ["🔊 Ultrassom", "🔴 Destacar PDF", "📊 Planilha"]
+    ["🔊 Ultrassom", "🔴 Destacar PDF", "📊 Planilha", "📘 Índice"]
 )
 
 if opcao == "🔊 Ultrassom":
@@ -20,3 +20,6 @@ elif opcao == "🔴 Destacar PDF":
 
 elif opcao == "📊 Planilha":
     planilha.run()
+
+elif opcao == "📘 Índice":
+    indiceapp.run()
