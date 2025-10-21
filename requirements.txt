@@ -6,3 +6,4 @@ pymupdf
 pandas
 openpyxl
 streamlit-sortables
+PyPDF2
