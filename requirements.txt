@@ -5,4 +5,4 @@ librosa
 pymupdf
 pandas
 openpyxl
-streamlit-sortables PyPDF2
+streamlit-sortables
