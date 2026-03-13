@@ -207,16 +207,42 @@ def run():
 
         nome_arquivo = st.text_input(
             "📝 Nome do arquivo final (sem .pdf):",
-            value="BEE ___-26 M.P. SE CLIENTE",
+            value="BEE0000-26-Cliente-Unidade-Cidade-Código do Serviço",
             key="nome_arquivo_input"
         ).strip()
 
         # Normaliza o nome e garante extensão .pdf
         if nome_arquivo == "":
-            nome_arquivo = "BEE ___-26 M.P. SE CLIENTE"
+            nome_arquivo = "BEE0000-26-Cliente-Unidade-Cidade-Código do Serviço"
         if not nome_arquivo.lower().endswith(".pdf"):
             nome_arquivo = nome_arquivo + ".pdf"
+        st.write("""Exemplos:    
+1.	BEE0010-MBRF-Ração-Videira-MP
+2.  BEE0015-KRONA-Tubos-Joinville-MC
+3.	BEE0128-CISER-Araquari-OL
+4.	BEE0130-WEG-Laboratório-Jaraguá-MP
+5.	BEE0135-WEG-Trafos-Itajaí-SPDA
+6.	BEE0150-WEG-Trafos-Blumenau-MP
+7.	BEE1026-MBRF-Frigorífico-Francisco Beltrão-MP
 
+Código dos serviços padronizados:
+
+    MP – Manutenção Preventiva
+    MC – Manutenção Corretiva
+    TM – Termografia 
+    US – Ultrassom 
+    CO – Comissionamento
+    SP – SPDA
+    TE – Malha de Terra
+    OL – Análise de Óleo
+    CS – Consultoria
+    EE – Estudos Elétricos
+    BK – BEEKit
+    AU – Automação (pode ser PME, EPO, ou qualquer outro software de controle)
+    TR – Troca de equipamentos (pode ser relé, disjuntor, medidor ou qualquer outro)
+    MD – Medição de grandezas
+    OU – Qualquer atividade que não se enquadra nos critérios acima
+""")
         st.download_button(
             "📥 Baixar PDF FINAL",
             data=st.session_state["pdf_final"],
