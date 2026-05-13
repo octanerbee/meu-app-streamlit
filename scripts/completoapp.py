@@ -73,8 +73,8 @@ def run():
     st.header("2️⃣ Colorir condições automaticamente")
 
     TEXTOS_CORES = {
-        "Equipamento em boas condições para operação": (0, 0.8, 0),
-        "Equipamento requer intervenção": (1, 0, 0),
+        "Equipamento em boas condições para operação" or "Resultados indicam que o equipamento está em boas condições de operação.": (0, 0.8, 0),
+        "Equipamento requer intervenção.": (1, 0, 0),
         "EM ANÁLISE": (1, 1, 0),
     }
 
