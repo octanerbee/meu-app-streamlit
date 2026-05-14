@@ -11,15 +11,17 @@ def run():
     st.title("📄 Processador Completo de PDF")
     st.markdown("### Fluxo: Juntar PDFs → Colorir Condições → Criar Índice Navegável")
 
-    # ============================
-    # 1. UPLOAD E ORDENAÇÃO
-    # ============================
+
     st.header("1️⃣ Juntar e organizar PDFs")
 
     uploaded_files = st.file_uploader(
         "Envie os arquivos PDF:",
         type=["pdf"],
         accept_multiple_files=True
+    )
+    incluir_pagina_final = st.checkbox(
+        "📄 Incluir última página padrão",
+        value=True
     )
 
     if "pdf_unido" not in st.session_state:
@@ -47,6 +49,9 @@ def run():
                     pdf_bytes = pdf.read()
                     merger.append(io.BytesIO(pdf_bytes))
 
+                if incluir_pagina_final:
+                    merger.append("ultima_pagina_padrao.pdf")
+
                 output = io.BytesIO()
                 merger.write(output)
                 merger.close()
@@ -67,9 +72,6 @@ def run():
             key="download_unido"
         )
 
-    # ============================
-    # 2. COLORIR CONDIÇÕES
-    # ============================
     st.header("2️⃣ Colorir condições automaticamente")
 
     TEXTOS_CORES = {
@@ -122,9 +124,7 @@ def run():
             key="download_colorido"
         )
 
-    # ============================
-    # 3. ÍNDICE NAVEGÁVEL
-    # ============================
+
     st.header("3️⃣ Criar índice navegável")
 
     pdf_bytes_for_index = st.session_state.get("pdf_colorido") or st.session_state.get("pdf_unido")
@@ -201,7 +201,6 @@ def run():
 
                         texto = f"Página {pagina_atual} de {total_paginas}"
 
-                        # posição ao contrario
                         x = rect.width - 120
                         y = rect.height - 24
 
@@ -213,6 +212,7 @@ def run():
                             color=(0, 0, 0)
                         )
 
+                    # salva PDF final
                     pdf_final_buf = io.BytesIO()
                     pdf_temp.save(pdf_final_buf)
                     pdf_temp.close()
@@ -224,7 +224,6 @@ def run():
                 except Exception as e:
                     st.error(f"❌ Erro ao criar índice navegável: {e}")
 
-    # Se o PDF final existe, mostrar campo de nome e botão de download
     if st.session_state.get("pdf_final"):
         st.markdown("---")
         st.subheader("📥 Baixar PDF final")
@@ -235,7 +234,6 @@ def run():
             key="nome_arquivo_input"
         ).strip()
 
-        # Normaliza o nome e garante extensão .pdf
         if nome_arquivo == "":
             nome_arquivo = "BEE0000-26-Cliente-Unidade-Cidade-Código do Serviço"
         if not nome_arquivo.lower().endswith(".pdf"):
@@ -267,6 +265,7 @@ Código dos serviços padronizados:
     MD – Medição de grandezas
     OU – Qualquer atividade que não se enquadra nos critérios acima
 """)
+
         st.download_button(
             "📥 Baixar PDF FINAL",
             data=st.session_state["pdf_final"],
@@ -275,9 +274,6 @@ Código dos serviços padronizados:
             key="download_final"
         )
 
-    # ============================
-    # Opcional: limpar sessão
-    # ============================
     st.markdown("---")
     if st.button("🔄 Reiniciar / Limpar sessão", key="btn_clear"):
         for k in ["pdf_unido", "pdf_colorido", "pdf_final"]:
