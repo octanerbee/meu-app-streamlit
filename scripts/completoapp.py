@@ -190,6 +190,29 @@ def run():
                                 "zoom": 0
                             })
 
+                    total_paginas = len(pdf_temp)
+
+                    for page_num in range(1, len(pdf_temp)):
+                        page = pdf_temp[page_num]
+
+                        rect = page.rect
+
+                        pagina_atual = page_num + 1
+
+                        texto = f"Página {pagina_atual} de {total_paginas}"
+
+                        # posição ao contrario
+                        x = rect.width - 120
+                        y = rect.height - 24
+
+                        page.insert_text(
+                            (x, y),
+                            texto,
+                            fontsize=10,
+                            fontname="helv",
+                            color=(0, 0, 0)
+                        )
+
                     pdf_final_buf = io.BytesIO()
                     pdf_temp.save(pdf_final_buf)
                     pdf_temp.close()
