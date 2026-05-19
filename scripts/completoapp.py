@@ -209,7 +209,7 @@ def run():
                             texto,
                             fontsize=10,
                             fontname="helv",
-                            color=(0, 0, 0)
+                            color=(1, 1, 1)
                         )
 
                     # salva PDF final
