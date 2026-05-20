@@ -3,6 +3,141 @@ import fitz  # PyMuPDF
 from PyPDF2 import PdfMerger
 from streamlit_sortables import sort_items
 import io
+import base64
+import re
+import streamlit.components.v1 as components
+import tempfile
+from PIL import Image
+
+
+def mostrar_preview_pdf(pdf_bytes):
+
+    try:
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        total_paginas = len(doc)
+
+        st.info(f"📄 Preview do PDF ({total_paginas} páginas)")
+
+        mat = fitz.Matrix(1.2, 1.2)
+
+        colunas_por_linha = 3
+
+        for i in range(0, total_paginas, colunas_por_linha):
+
+            cols = st.columns(colunas_por_linha)
+
+            for j in range(colunas_por_linha):
+
+                pagina_idx = i + j
+
+                if pagina_idx >= total_paginas:
+                    break
+
+                page = doc[pagina_idx]
+
+                pix = page.get_pixmap(matrix=mat)
+
+                img_bytes = pix.tobytes("png")
+
+                with cols[j]:
+
+                    st.image(
+                        img_bytes,
+                        caption=f"Página {pagina_idx + 1}",
+                        use_container_width=True
+                    )
+
+        doc.close()
+
+    except Exception as e:
+
+        st.error(f"Erro ao gerar preview: {e}")
+
+def gerar_nome_automatico(pdf_bytes):
+
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        texto = doc[0].get_text("text")
+
+        doc.close()
+
+        linhas = [l.strip() for l in texto.split("\n") if l.strip()]
+
+        codigo_servico = "OU"
+
+        servicos = {
+            "MANUTENÇÃO PREVENTIVA": "MP",
+            "MANUTENÇÃO CORRETIVA": "MC",
+            "TERMOGRAFIA": "TM",
+            "ULTRASSOM": "US",
+            "COMISSIONAMENTO": "CO",
+            "SPDA": "SP",
+            "ANÁLISE DE ÓLEO": "OL",
+        }
+
+        texto_upper = texto.upper()
+
+        for nome, sigla in servicos.items():
+            if nome in texto_upper:
+                codigo_servico = sigla
+                break
+
+        bee = "BEE0000-00"
+
+
+        bee_match = re.search(r"BEE\s*(\d+)\s*/\s*(\d+)", texto_upper)
+
+        if bee_match:
+            numero = bee_match.group(1).zfill(4)
+            ano = bee_match.group(2)
+
+            bee = f"BEE{numero}-{ano}"
+
+        cliente_unidade = "CLIENTE"
+
+        for linha in linhas:
+
+            if "BEE" in linha.upper():
+                continue
+
+            if "-" in linha or "–" in linha:
+                cliente_unidade = linha.replace("/", "-")
+                break
+
+        cidade = "CIDADE"
+
+        for linha in linhas:
+
+            estados = [
+                "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+                "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+                "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+            ]
+
+            for linha in linhas:
+
+                linha_upper = linha.upper()
+
+                for uf in estados:
+
+                    if f"- {uf}" in linha_upper:
+                        cidade = linha.split("-")[0].strip()
+                        break
+
+        cliente_unidade = cliente_unidade.replace("/", "-")
+        cliente_unidade = cliente_unidade.replace(":", "")
+        cidade = cidade.replace(":", "")
+
+        nome_final = f"{bee}-{cliente_unidade}-{cidade}-{codigo_servico}.pdf"
+
+        return nome_final
+
+    except Exception as e:
+        print(e)
+        return "BEE0000-CLIENTE-CIDADE-OU.pdf"
 
 def run():
 
@@ -10,7 +145,6 @@ def run():
 
     st.title("📄 Processador Completo de PDF")
     st.markdown("### Fluxo: Juntar PDFs → Colorir Condições → Criar Índice Navegável")
-
 
     st.header("1️⃣ Juntar e organizar PDFs")
 
@@ -62,16 +196,6 @@ def run():
             except Exception as e:
                 st.error(f"❌ Erro ao juntar PDFs: {e}")
 
-    if st.session_state.get("pdf_unido"):
-        st.markdown("**PDF unido disponível.**")
-        st.download_button(
-            label="⬇️ Baixar PDF unificado (intermediário)",
-            data=st.session_state["pdf_unido"],
-            file_name="pdf_unido.pdf",
-            mime="application/pdf",
-            key="download_unido"
-        )
-
     st.header("2️⃣ Colorir condições automaticamente")
 
     TEXTOS_CORES = {
@@ -114,16 +238,6 @@ def run():
                 st.error(f"❌ Erro ao aplicar coloração: {e}")
     else:
         st.info("Faça a junção de PDFs primeiro (etapa 1) para aplicar a coloração.")
-
-    if st.session_state.get("pdf_colorido"):
-        st.download_button(
-            label="⬇️ Baixar PDF colorido (intermediário)",
-            data=st.session_state["pdf_colorido"],
-            file_name="pdf_colorido.pdf",
-            mime="application/pdf",
-            key="download_colorido"
-        )
-
 
     st.header("3️⃣ Criar índice navegável")
 
@@ -190,6 +304,7 @@ def run():
                                 "zoom": 0
                             })
 
+                    
                     total_paginas = len(pdf_temp)
 
                     for page_num in range(1, len(pdf_temp)):
@@ -212,13 +327,38 @@ def run():
                             color=(1, 1, 1)
                         )
 
-                    # salva PDF final
                     pdf_final_buf = io.BytesIO()
-                    pdf_temp.save(pdf_final_buf)
+
+                    pdf_temp.save(
+                        pdf_final_buf,
+                        garbage=4,
+                        deflate=True,
+                        clean=True
+                    )
+
                     pdf_temp.close()
+
                     pdf_final_buf.seek(0)
 
-                    st.session_state["pdf_final"] = pdf_final_buf.getvalue()
+                    doc_final = fitz.open(
+                        stream=pdf_final_buf.getvalue(),
+                        filetype="pdf"
+                    )
+
+                    pdf_limpo = io.BytesIO()
+
+                    doc_final.save(
+                        pdf_limpo,
+                        garbage=4,
+                        deflate=True,
+                        clean=True
+                    )
+
+                    doc_final.close()
+
+                    pdf_limpo.seek(0)
+
+                    st.session_state["pdf_final"] = pdf_limpo.getvalue()
 
                     st.success("✅ PDF final gerado com sucesso!")
                 except Exception as e:
@@ -230,7 +370,7 @@ def run():
 
         nome_arquivo = st.text_input(
             "📝 Nome do arquivo final (sem .pdf):",
-            value="BEE0000-26-Cliente-Unidade-Cidade-Código do Serviço",
+            value=gerar_nome_automatico(st.session_state["pdf_final"]),
             key="nome_arquivo_input"
         ).strip()
 
@@ -265,6 +405,9 @@ Código dos serviços padronizados:
     MD – Medição de grandezas
     OU – Qualquer atividade que não se enquadra nos critérios acima
 """)
+        st.markdown("---")
+        st.subheader("👁 Preview do PDF final")
+
 
         st.download_button(
             "📥 Baixar PDF FINAL",
@@ -274,12 +417,17 @@ Código dos serviços padronizados:
             key="download_final"
         )
 
+
+        mostrar_preview_pdf(st.session_state["pdf_final"])
+
     st.markdown("---")
     if st.button("🔄 Reiniciar / Limpar sessão", key="btn_clear"):
         for k in ["pdf_unido", "pdf_colorido", "pdf_final"]:
             if k in st.session_state:
                 del st.session_state[k]
         st.experimental_rerun()
+
+        mostrar_preview_pdf(st.session_state["pdf_final"])
 
 if __name__ == "__main__":
     run()
