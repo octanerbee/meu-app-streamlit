@@ -7,3 +7,8 @@ pandas
 openpyxl
 streamlit-sortables
 PyPDF2
+re
+base64
+streamlit.components.v1
+tempfile
+PIL import Image
