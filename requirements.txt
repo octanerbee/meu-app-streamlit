@@ -7,6 +7,5 @@ pandas
 openpyxl
 streamlit-sortables
 PyPDF2
-base64
 streamlit.components.v1
 tempfile
