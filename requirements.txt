@@ -11,4 +11,3 @@ re
 base64
 streamlit.components.v1
 tempfile
-PIL import Image
