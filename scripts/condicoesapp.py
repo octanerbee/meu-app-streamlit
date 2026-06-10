@@ -9,8 +9,9 @@ def run():
 
     TEXTOS_CORES = {
         "Equipamento em boas condições para operação": (0, 0.8, 0),
+        "Resultados indicam que o equipamento está em boas condições de operação.": (0, 0.8, 0),
         "Equipamento requer intervenção": (1, 0, 0),
-        "EM ANÁLISE": (1, 1, 0),
+        "Resultados indicam que o equipamento está apto a operar, salvo seguintes observações.": (0.8, 0.8, 0),
     }
 
     FONTE = "times-bold"
