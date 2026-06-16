@@ -223,7 +223,7 @@ def run():
                                     (x, y),
                                     texto_alvo,
                                     fontsize=12,
-                                    fontname="times-bold",
+                                    fontname="helvetica-bold",
                                     color=cor,
                                 )
 
