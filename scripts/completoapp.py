@@ -296,7 +296,9 @@ def run():
                     index_page = pdf_temp[pagina_indice]
 
                     for titulo, pagina_destino in targets.items():
+
                         for bbox in index_page.search_for(titulo):
+                            # mantém o link clicável
                             index_page.insert_link({
                                 "kind": fitz.LINK_GOTO,
                                 "from": bbox,
@@ -304,6 +306,25 @@ def run():
                                 "zoom": 0
                             })
 
+                        for xxx_rect in index_page.search_for("XXX"):
+
+                            if abs(xxx_rect.y0 - bbox.y0) < 3:
+                                index_page.add_redact_annot(
+                                    xxx_rect,
+                                    fill=(1, 1, 1)
+                                )
+
+                                index_page.apply_redactions()
+
+                                index_page.insert_text(
+                                    (xxx_rect.x0, xxx_rect.y1 - 2),
+                                    str(pagina_destino + 1),
+                                    fontsize=14,
+                                    fontname = "helv",
+                                    color=(0, 0, 0)
+                                )
+
+                                break
                     
                     total_paginas = len(pdf_temp)
 
