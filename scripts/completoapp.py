@@ -268,7 +268,7 @@ def run():
                     for page_num in range(len(pdf_temp)):
                         text = pdf_temp[page_num].get_text("text")
 
-                                                if "Teste Em Painel e Cabos de Média Tensão" in text and "PAINEL DE MÉDIA TENSÃO" not in targets:
+                        if "Teste Em Painel e Cabos de Média Tensão" in text and "PAINEL DE MÉDIA TENSÃO" not in targets:
                             targets["PAINEL DE MÉDIA TENSÃO"] = page_num
                         elif "Relé de sobrecorrente" in text and "RELÉ DE SOBRECORRENTE" not in targets:
                             targets["RELÉ DE SOBRECORRENTE"] = page_num
