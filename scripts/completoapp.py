@@ -268,7 +268,7 @@ def run():
                     for page_num in range(len(pdf_temp)):
                         text = pdf_temp[page_num].get_text("text")
 
-                        if "Teste Em Painel e Cabos de Média Tensão" in text and "PAINEL DE MÉDIA TENSÃO" not in targets:
+                                                if "Teste Em Painel e Cabos de Média Tensão" in text and "PAINEL DE MÉDIA TENSÃO" not in targets:
                             targets["PAINEL DE MÉDIA TENSÃO"] = page_num
                         elif "Relé de sobrecorrente" in text and "RELÉ DE SOBRECORRENTE" not in targets:
                             targets["RELÉ DE SOBRECORRENTE"] = page_num
@@ -282,12 +282,28 @@ def run():
                             targets["TRANSFORMADOR DE CORRENTE"] = page_num
                         elif "Transformadores de Potencial" in text and "TRANSFORMADOR DE POTENCIAL" not in targets:
                             targets["TRANSFORMADOR DE POTENCIAL"] = page_num
-                        elif "Transformadores Média Tensão a Seco" in text and "TRANSFORMADOR DE MÉDIA TENSÃO" not in targets:
+                        elif "Transformador Média Tensão a Seco" in text and "TRANSFORMADOR DE MÉDIA TENSÃO" not in targets:
                             targets["TRANSFORMADOR DE MÉDIA TENSÃO"] = page_num
-                        elif "Transformadores Média Tensão a Óleo" in text and "TRANSFORMADOR DE MÉDIA TENSÃO" not in targets:
+                        elif "Transformador Média Tensão a Óleo" in text and "TRANSFORMADOR DE MÉDIA TENSÃO" not in targets:
                             targets["TRANSFORMADOR DE MÉDIA TENSÃO"] = page_num
                         elif "Disjuntor Baixa Tensão" in text and "DISJUNTOR DE BAIXA TENSÃO" not in targets:
                             targets["DISJUNTOR DE BAIXA TENSÃO"] = page_num
+                        elif "Retificador/Baterias" in text and "RETIFICADOR/BATERIAS" not in targets:
+                            targets["RETIFICADOR/BATERIAS"] = page_num
+                        elif "Banco de baterias" in text and "BANCO DE BATERIAS" not in targets:
+                            targets["BANCO DE BATERIAS"] = page_num
+                        elif "Relé diferencial" in text and "RELÉ DIFERENCIAL" not in targets:
+                            targets["RELÉ DIFERENCIAL"] = page_num
+                        elif "Transformadores de Corrente Alta Tensão" in text and "TRANFORMADOR ED CORRENTE" not in targets:
+                            targets["TRANSFORMADOR DE CORRENTE"] = page_num
+                        elif "Transformadores de Potencial Alta Tensão" in text and "TRANSFORMADOR DE POTENCIAL" not in targets:
+                            targets["TRANSFORMADOR DE POTENCIAL"] = page_num
+                        elif "Transformador Alta Tensão a Óleo" in text and "TRANSFORMADOR DE ALTA TENSÃO" not in targets:
+                            targets["TRANSFORMADOR DE ALTA TENSÃO"] = page_num
+                        elif "Disjuntor Alta Tensão" in text and "DISJUNTOR DE ALTA TENSÃO" not in targets:
+                            targets["DISJUNTOR DE ALTA TENSÃO"] = page_num
+                        elif "Resistor de Aterramento" in text and "RESISTOR DE ATERRAMENTO" not in targets:
+                            targets["RESISTOR DE ATERRAMENTO"] = page_num
 
                     st.subheader("📄 Mapeamento encontrado:")
                     for k, v in targets.items():
@@ -298,7 +314,6 @@ def run():
                     for titulo, pagina_destino in targets.items():
 
                         for bbox in index_page.search_for(titulo):
-                            # mantém o link clicável
                             index_page.insert_link({
                                 "kind": fitz.LINK_GOTO,
                                 "from": bbox,
