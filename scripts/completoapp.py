@@ -5,9 +5,12 @@ from streamlit_sortables import sort_items
 import io
 import base64
 import re
+import os
 import streamlit.components.v1 as components
 import tempfile
 from PIL import Image
+
+LAUDOS_PASTA_PADRAO = "laudos"
 
 
 def mostrar_preview_pdf(pdf_bytes):
@@ -65,7 +68,7 @@ def gerar_nome_automatico(pdf_bytes):
         doc.close()
 
         linhas = [l.strip() for l in texto.split("\n") if l.strip()]
-
+        
         codigo_servico = "OU"
 
         servicos = {
@@ -86,7 +89,6 @@ def gerar_nome_automatico(pdf_bytes):
                 break
 
         bee = "BEE0000-00"
-
 
         bee_match = re.search(r"BEE\s*(\d+)\s*/\s*(\d+)", texto_upper)
 
@@ -138,6 +140,90 @@ def gerar_nome_automatico(pdf_bytes):
     except Exception as e:
         print(e)
         return "BEE0000-CLIENTE-CIDADE-OU.pdf"
+
+def extrair_patrimonios(pdf_bytes):
+    """
+    Varre o texto do PDF final procurando os blocos de
+    'Instrumento Utilizado' + 'Número de patrimônio' (nos dois
+    formatos observados) e retorna uma lista de dicts únicos:
+    [{"numero": "0006", "instrumento": "Compano 100"}, ...]
+    O número é sempre normalizado para 4 dígitos.
+    """
+
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    numero_regex = re.compile(
+        r"N[uú]mero\s+de\s+[Pp]atrim[oô]nio:?\s*\n?\s*(\d{1,6})",
+        re.IGNORECASE
+    )
+    instrumento_regex = re.compile(
+        r"Instrumento\s+[Uu]tilizado:?\s*\n?\s*([^\n•]{2,80})",
+        re.IGNORECASE
+    )
+
+    numeros_todos = []
+    instrumentos_todos = []
+
+    for page in doc:
+        texto = page.get_text("text")
+
+        for m in numero_regex.finditer(texto):
+            numeros_todos.append(m.group(1))
+
+        for m in instrumento_regex.finditer(texto):
+            instrumentos_todos.append(m.group(1).strip())
+
+    doc.close()
+
+    resultado = []
+    vistos = set()
+
+    for i, numero in enumerate(numeros_todos):
+        numero_padded = numero.strip().zfill(4)
+
+        if numero_padded in vistos:
+            continue
+
+        vistos.add(numero_padded)
+
+        instrumento = instrumentos_todos[i] if i < len(instrumentos_todos) else "Instrumento não identificado"
+
+        resultado.append({"numero": numero_padded, "instrumento": instrumento})
+
+    return resultado
+
+
+def buscar_laudos_pasta(pasta):
+    """Lê os PDFs de uma pasta local, indexando pelo nome do arquivo (número de patrimônio)."""
+
+    laudos = {}
+
+    if pasta and os.path.isdir(pasta):
+        for nome_arquivo in os.listdir(pasta):
+            if nome_arquivo.lower().endswith(".pdf"):
+                numero = os.path.splitext(nome_arquivo)[0].strip().zfill(4)
+                caminho = os.path.join(pasta, nome_arquivo)
+                try:
+                    with open(caminho, "rb") as f:
+                        laudos[numero] = f.read()
+                except Exception:
+                    pass
+
+    return laudos
+
+
+def laudos_de_uploads(arquivos):
+    """Indexa arquivos enviados via st.file_uploader pelo nome (número de patrimônio)."""
+
+    laudos = {}
+
+    if arquivos:
+        for arq in arquivos:
+            numero = os.path.splitext(arq.name)[0].strip().zfill(4)
+            laudos[numero] = arq.read()
+
+    return laudos
+
 
 def run():
 
@@ -304,7 +390,6 @@ def run():
                             targets["DISJUNTOR DE ALTA TENSÃO"] = page_num
                         elif "Resistor de Aterramento" in text and "RESISTOR DE ATERRAMENTO" not in targets:
                             targets["RESISTOR DE ATERRAMENTO"] = page_num
-
                     st.subheader("📄 Mapeamento encontrado:")
                     for k, v in targets.items():
                         st.write(f"**{k}** → página {v + 1}")
@@ -314,6 +399,7 @@ def run():
                     for titulo, pagina_destino in targets.items():
 
                         for bbox in index_page.search_for(titulo):
+  
                             index_page.insert_link({
                                 "kind": fitz.LINK_GOTO,
                                 "from": bbox,
@@ -340,7 +426,7 @@ def run():
                                 )
 
                                 break
-                    
+
                     total_paginas = len(pdf_temp)
 
                     for page_num in range(1, len(pdf_temp)):
@@ -400,13 +486,127 @@ def run():
                 except Exception as e:
                     st.error(f"❌ Erro ao criar índice navegável: {e}")
 
+    st.header("4️⃣ Anexar laudos de aferição dos instrumentos")
+
+    if "laudos_manuais" not in st.session_state:
+        st.session_state["laudos_manuais"] = {}
+    if "patrimonios_detectados" not in st.session_state:
+        st.session_state["patrimonios_detectados"] = None
+    if "pdf_com_laudos" not in st.session_state:
+        st.session_state["pdf_com_laudos"] = None
+
+    if not st.session_state.get("pdf_final"):
+        st.info("Gere o PDF final (etapas 1 a 3) antes de anexar os laudos.")
+    else:
+        pasta_laudos = LAUDOS_PASTA_PADRAO
+
+        arquivos_laudos = st.file_uploader(
+            "📤 Envie os laudos (PDF, nome = número de patrimônio, ex: 0034.pdf):",
+            type=["pdf"],
+            accept_multiple_files=True,
+            key="upload_laudos"
+        )
+
+        if st.button("🔍 Buscar laudos no relatório", key="btn_buscar_laudos"):
+            st.session_state["patrimonios_detectados"] = extrair_patrimonios(st.session_state["pdf_final"])
+
+        patrimonios = st.session_state.get("patrimonios_detectados")
+
+        if patrimonios:
+            laudos_disponiveis = {}
+            laudos_disponiveis.update(buscar_laudos_pasta(pasta_laudos))
+            laudos_disponiveis.update(laudos_de_uploads(arquivos_laudos))
+            laudos_disponiveis.update(st.session_state["laudos_manuais"])
+
+            faltando_itens = []
+
+            st.write("#### 📋 Instrumentos detectados no relatório:")
+
+            for item in patrimonios:
+                numero = item["numero"]
+                instrumento = item["instrumento"]
+
+                if numero in laudos_disponiveis:
+                    st.write(f"✅ **{numero}** — {instrumento} — laudo encontrado")
+                else:
+                    faltando_itens.append(item)
+                    st.write(f"❌ **{numero}** — {instrumento} — laudo **NÃO** encontrado")
+
+            if faltando_itens:
+                st.warning(
+                    f"⚠️ {len(faltando_itens)} laudo(s) não encontrado(s). "
+                    "Você pode enviá-los individualmente abaixo (isso não bloqueia o download do PDF)."
+                )
+
+                for item in faltando_itens:
+                    numero = item["numero"]
+                    instrumento = item["instrumento"]
+
+                    arquivo_manual = st.file_uploader(
+                        f"Enviar laudo do patrimônio {numero} ({instrumento}):",
+                        type=["pdf"],
+                        key=f"laudo_manual_{numero}"
+                    )
+
+                    if arquivo_manual is not None:
+                        st.session_state["laudos_manuais"][numero] = arquivo_manual.read()
+                        st.success(f"Laudo do patrimônio {numero} recebido. Clique em '🔍 Buscar laudos' de novo ou anexe abaixo.")
+
+            if st.button("📎 Anexar laudos ao PDF final", key="btn_anexar_laudos"):
+                try:
+                    laudos_disponiveis.update(st.session_state["laudos_manuais"])
+
+                    doc_final = fitz.open(stream=st.session_state["pdf_final"], filetype="pdf")
+
+                    anexados = []
+                    ainda_faltando = []
+
+                    for item in patrimonios:
+                        numero = item["numero"]
+                        dados_laudo = laudos_disponiveis.get(numero)
+
+                        if dados_laudo:
+                            try:
+                                laudo_doc = fitz.open(stream=dados_laudo, filetype="pdf")
+                                doc_final.insert_pdf(laudo_doc)
+                                laudo_doc.close()
+                                anexados.append(numero)
+                            except Exception:
+                                ainda_faltando.append(numero)
+                        else:
+                            ainda_faltando.append(numero)
+
+                    buf_com_laudos = io.BytesIO()
+                    doc_final.save(buf_com_laudos, garbage=4, deflate=True, clean=True)
+                    doc_final.close()
+                    buf_com_laudos.seek(0)
+
+                    st.session_state["pdf_com_laudos"] = buf_com_laudos.getvalue()
+
+                    if anexados:
+                        st.success(f"✅ {len(anexados)} laudo(s) anexado(s): {', '.join(anexados)}")
+                    if ainda_faltando:
+                        st.warning(
+                            f"⚠️ Ainda faltam laudos para: {', '.join(ainda_faltando)}. "
+                            "O PDF foi gerado mesmo assim, sem esses laudos."
+                        )
+                except Exception as e:
+                    st.error(f"❌ Erro ao anexar laudos: {e}")
+        else:
+            st.info("Clique em '🔍 Buscar laudos no relatório' para identificar os instrumentos utilizados.")
+
     if st.session_state.get("pdf_final"):
         st.markdown("---")
         st.subheader("📥 Baixar PDF final")
 
+        pdf_para_baixar = st.session_state.get("pdf_com_laudos") or st.session_state["pdf_final"]
+
+        if st.session_state.get("pdf_com_laudos"):
+            st.caption("ℹ️ Baixando a versão com os laudos de aferição anexados.")
+
         nome_arquivo = st.text_input(
             "📝 Nome do arquivo final (sem .pdf):",
-            value=gerar_nome_automatico(st.session_state["pdf_final"]),
+            value=gerar_nome_automatico(pdf_para_baixar),
             key="nome_arquivo_input"
         ).strip()
 
@@ -447,18 +647,18 @@ Código dos serviços padronizados:
 
         st.download_button(
             "📥 Baixar PDF FINAL",
-            data=st.session_state["pdf_final"],
+            data=pdf_para_baixar,
             file_name=nome_arquivo,
             mime="application/pdf",
             key="download_final"
         )
 
 
-        mostrar_preview_pdf(st.session_state["pdf_final"])
+        mostrar_preview_pdf(pdf_para_baixar)
 
     st.markdown("---")
     if st.button("🔄 Reiniciar / Limpar sessão", key="btn_clear"):
-        for k in ["pdf_unido", "pdf_colorido", "pdf_final"]:
+        for k in ["pdf_unido", "pdf_colorido", "pdf_final", "pdf_com_laudos", "patrimonios_detectados", "laudos_manuais"]:
             if k in st.session_state:
                 del st.session_state[k]
         st.experimental_rerun()
