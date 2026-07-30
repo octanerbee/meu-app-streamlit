@@ -9,11 +9,11 @@ st.sidebar.title("Menu")
 
 opcao = st.sidebar.selectbox(
     "Escolha uma ferramenta:",
-    ["🔊 Ultrassom", "🔴 Destacar PDF", "📊 Planilha", "📘 Índice", "🎨 Condições", "🖇️ Juntar PDF's", "📄 Processador Completo de PDF"]
+    ["📄 Processador Completo de PDF", "🔴 Destacar PDF", "📊 Planilha", "📘 Índice", "🎨 Condições", "🖇️ Juntar PDF's", "🔊 Ultrassom"]
 )
 
-if opcao == "🔊 Ultrassom":
-    ultrassomapp.run()
+if opcao == "📄 Processador Completo de PDF":
+    completoapp.run()
 
 elif opcao == "🔴 Destacar PDF":
     vermelhoapp.run()
@@ -30,5 +30,5 @@ elif opcao == "🎨 Condições":
 elif opcao == "🖇️ Juntar PDF's":
     juntarpdfsapp.run()
 
-elif opcao == "📄 Processador Completo de PDF":
-    completoapp.run()
+elif opcao == "🔊 Ultrassom":
+    ultrassomapp.run()
