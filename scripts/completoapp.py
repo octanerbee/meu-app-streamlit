@@ -588,7 +588,7 @@ def run():
                             targets["TRANSFORMADOR DE MÉDIA TENSÃO"] = page_num
                         elif "Disjuntor Baixa Tensão" in text and "DISJUNTOR DE BAIXA TENSÃO" not in targets:
                             targets["DISJUNTOR DE BAIXA TENSÃO"] = page_num
-                        elif "Retificador/Baterias" in text and "RETIFICADOR/BATERIAS" not in targets:
+                        elif "Retificador" in text and "RETIFICADOR/BATERIAS" not in targets:
                             targets["RETIFICADOR/BATERIAS"] = page_num
                         elif "Banco de baterias" in text and "BANCO DE BATERIAS" not in targets:
                             targets["BANCO DE BATERIAS"] = page_num
