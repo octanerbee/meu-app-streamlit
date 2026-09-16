@@ -234,12 +234,12 @@ _itens_pessoais = [
     {"item": "Aluguel dos carros", "situacao": "nada"},
     {"item": "Bebidas", "situacao": "nada"},
     {"item": "Bebidas para as mina", "situacao": "nada"},
-    {"item": "As mina", "situacao": "no processo"},
+    {"item": "As mina", "situacao": "nada"},
     {"item": "Narguile", "situacao": "nada"},
-    {"item": "Lista de confirmados", "situacao": "no processo"},
+    {"item": "Lista de confirmados", "situacao": "nada"},
     {"item": "Folgas", "situacao": "nada"},
     {"item": "Motoristas", "situacao": "nada"},
-    {"item": "Shape", "situacao": "no processo"},
+    {"item": "Shape", "situacao": "nada"},
 ]
 
 _status_verde = ["feito", "concluido", "concluído", "pronto", "ok", "resolvido", "pago", "comprado", "reservado"]
