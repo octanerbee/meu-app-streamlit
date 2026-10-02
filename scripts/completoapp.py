@@ -8,10 +8,48 @@ import re
 import os
 import streamlit.components.v1 as components
 import tempfile
+import json
 from PIL import Image
 
 
 LAUDOS_PASTA_PADRAO = "laudos"
+
+MUSICA_CARNAVAL_ARQUIVO_LOCAL = "musica.mp3"
+
+ARQUIVO_CONVIDADOS = "convidados.json"
+CONVIDADOS_PADRAO = [
+    {"nome": "Octaner", "status": "Talvez"},
+    {"nome": "William", "status": "Talvez"},
+    {"nome": "Stevan", "status": "Talvez"},
+    {"nome": "Rafael", "status": "Talvez"},
+    {"nome": "Nilton", "status": "Talvez"},
+    {"nome": "Lucas", "status": "Talvez"},
+    {"nome": "Xandão", "status": "Talvez"},
+    {"nome": "Ricardinho", "status": "Talvez"},
+    {"nome": "+5 Elegantes mulheres", "status": "Talvez"},
+]
+
+TABELA_PONTUACAO_CARNAVAL = [
+    {"item": "Mulher bonita", "pontos": "+10"},
+    {"item": "Mulher feia", "pontos": "+20"},
+    {"item": "Nem lá, nem cá", "pontos": "+15"},
+    {"item": "Gordinha", "pontos": "+25"},
+    {"item": "Gorda", "pontos": "+40"},
+    {"item": "A Gorda", "pontos": "+75"},
+    {"item": "Estrangeira", "pontos": "+15"},
+    {"item": "Ex de amigo", "pontos": "+40"},
+    {"item": "Pegar ex", "pontos": "-90"},
+    {"item": "'Mulher' travesti", "pontos": "+120"},
+    {"item": "Tia da latinha", "pontos": "+100"},
+    {"item": "Cracuda", "pontos": "+90"},
+    {"item": "Mulher casada", "pontos": "+50"},
+    {"item": "Anã", "pontos": "+cm"},
+    {"item": "Morena", "pontos": "+5"},
+    {"item": "Loira", "pontos": "+10"},
+    {"item": "Ruiva", "pontos": "+15"},
+    {"item": "Cabelo colorido", "pontos": "+0"},
+]
+
 
 def mostrar_preview_pdf(pdf_bytes):
 
@@ -24,7 +62,7 @@ def mostrar_preview_pdf(pdf_bytes):
         st.info(f"📄 Preview do PDF ({total_paginas} páginas)")
 
         mat = fitz.Matrix(1.2, 1.2)
-
+        
         colunas_por_linha = 3
 
         for i in range(0, total_paginas, colunas_por_linha):
@@ -63,6 +101,7 @@ def gerar_nome_automatico(pdf_bytes):
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
+        # lê apenas a capa
         texto = doc[0].get_text("text")
 
         doc.close()
@@ -236,10 +275,10 @@ _itens_pessoais = [
     {"item": "Bebidas para as mina", "situacao": "nada"},
     {"item": "As mina", "situacao": "nada"},
     {"item": "Narguile", "situacao": "nada"},
-    {"item": "Lista de confirmados", "situacao": "nada"},
     {"item": "Folgas", "situacao": "nada"},
     {"item": "Motoristas", "situacao": "nada"},
     {"item": "Shape", "situacao": "nada"},
+    {"item": "Fantasias", "situacao": "nada"}
 ]
 
 _status_verde = ["feito", "concluido", "concluído", "pronto", "ok", "resolvido", "pago", "comprado", "reservado"]
@@ -434,6 +473,147 @@ def render_contador_carnaval():
     )
 
 
+def render_musica_carnaval():
+    """
+    Toca o arquivo de áudio definido em MUSICA_CARNAVAL_ARQUIVO_LOCAL,
+    se ele existir na mesma pasta do script.
+    """
+
+    caminho_audio = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), MUSICA_CARNAVAL_ARQUIVO_LOCAL
+    )
+
+    if os.path.isfile(caminho_audio):
+        try:
+            st.audio(caminho_audio, autoplay=True)
+        except TypeError:
+            # versões mais antigas do Streamlit não têm o parâmetro autoplay
+            st.audio(caminho_audio)
+    else:
+        st.caption(
+            f"🎶 Coloque um arquivo de áudio chamado `{MUSICA_CARNAVAL_ARQUIVO_LOCAL}` "
+            "na mesma pasta do script para tocar aqui."
+        )
+
+
+def _caminho_convidados():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ARQUIVO_CONVIDADOS)
+
+
+def carregar_convidados():
+    caminho = _caminho_convidados()
+    if os.path.isfile(caminho):
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return [dict(pessoa) for pessoa in CONVIDADOS_PADRAO]
+
+
+def salvar_convidados(lista):
+    try:
+        with open(_caminho_convidados(), "w", encoding="utf-8") as f:
+            json.dump(lista, f, ensure_ascii=False, indent=2)
+    except OSError:
+        st.warning("Não consegui salvar a lista de convidados em disco.")
+
+
+def render_tabela_pontuacao():
+    """
+    Mostra a tabela de pontuação do carnaval (fixa, definida em
+    TABELA_PONTUACAO_CARNAVAL — não é editável pelo app).
+    """
+
+    st.markdown("#### 🏆 Tabela de pontuação")
+
+    linhas = "\n".join(
+        f"| {item['item']} | {item['pontos']} |" for item in TABELA_PONTUACAO_CARNAVAL
+    )
+    tabela_md = f"| Item | Pontos |\n| --- | --- |\n{linhas}"
+
+    st.markdown(tabela_md)
+
+
+def render_lista_convidados():
+    """
+    Lista de convidados com RSVP (confirmado / talvez / não vai),
+    editável direto no app e salva em disco (ARQUIVO_CONVIDADOS) para
+    não se perder quando o app reinicia.
+    """
+
+    st.markdown("#### 🎉 Lista de convidados (RSVP)")
+
+    if "convidados_carnaval" not in st.session_state:
+        st.session_state["convidados_carnaval"] = carregar_convidados()
+
+    opcoes_status = ["Confirmado", "Talvez", "Não vai"]
+    emoji_status = {"Confirmado": "✅", "Talvez": "🤔", "Não vai": "❌"}
+
+    with st.form("form_add_convidado", clear_on_submit=True):
+        col1, col2, col3 = st.columns([3, 2, 1])
+
+        with col1:
+            nome_novo = st.text_input("Nome do convidado", key="novo_convidado_nome")
+
+        with col2:
+            status_novo = st.selectbox("Status", opcoes_status, key="novo_convidado_status")
+
+        with col3:
+            st.write("")
+            st.write("")
+            adicionar = st.form_submit_button("➕ Adicionar")
+
+    if adicionar and nome_novo.strip():
+        st.session_state["convidados_carnaval"].append(
+            {"nome": nome_novo.strip(), "status": status_novo}
+        )
+        salvar_convidados(st.session_state["convidados_carnaval"])
+        st.rerun()
+
+    convidados = st.session_state["convidados_carnaval"]
+
+    if not convidados:
+        st.info("Nenhum convidado adicionado ainda. Use o formulário acima 👆")
+        return
+
+    for i, pessoa in enumerate(convidados):
+        col1, col2, col3 = st.columns([3, 2, 1])
+
+        with col1:
+            st.markdown(f"{emoji_status.get(pessoa['status'], '🤔')} **{pessoa['nome']}**")
+
+        with col2:
+            novo_status = st.selectbox(
+                "Status",
+                opcoes_status,
+                index=opcoes_status.index(pessoa["status"]),
+                key=f"status_convidado_{i}",
+                label_visibility="collapsed",
+            )
+            if novo_status != pessoa["status"]:
+                st.session_state["convidados_carnaval"][i]["status"] = novo_status
+                salvar_convidados(st.session_state["convidados_carnaval"])
+                st.rerun()
+
+        with col3:
+            if st.button("🗑️", key=f"remover_convidado_{i}"):
+                st.session_state["convidados_carnaval"].pop(i)
+                salvar_convidados(st.session_state["convidados_carnaval"])
+                st.rerun()
+
+    total = len(convidados)
+    confirmados = sum(1 for p in convidados if p["status"] == "Confirmado")
+    talvez = sum(1 for p in convidados if p["status"] == "Talvez")
+    nao_vao = sum(1 for p in convidados if p["status"] == "Não vai")
+
+    st.markdown("---")
+    st.markdown(
+        f"**Total: {total} &nbsp;|&nbsp; ✅ {confirmados} confirmados "
+        f"&nbsp;|&nbsp; 🤔 {talvez} talvez &nbsp;|&nbsp; ❌ {nao_vao} não vão**"
+    )
+
+
 def run():
 
     st.set_page_config(page_title="PDF Automático Completo", page_icon="📄", layout="wide")
@@ -442,7 +622,12 @@ def run():
 
     with st.expander("🎭 Clique aqui para ver o que realmente importa"):
         render_contador_carnaval()
+        render_musica_carnaval()
         render_lista_carnaval()
+        st.markdown("---")
+        render_tabela_pontuacao()
+        st.markdown("---")
+        render_lista_convidados()
 
     st.markdown("### Fluxo: Juntar PDFs → Colorir Condições → Criar Índice Navegável")
 
@@ -588,7 +773,7 @@ def run():
                             targets["TRANSFORMADOR DE MÉDIA TENSÃO"] = page_num
                         elif "Disjuntor Baixa Tensão" in text and "DISJUNTOR DE BAIXA TENSÃO" not in targets:
                             targets["DISJUNTOR DE BAIXA TENSÃO"] = page_num
-                        elif "Retificador" in text and "RETIFICADOR/BATERIAS" not in targets:
+                        elif "Retificador/Baterias" in text and "RETIFICADOR/BATERIAS" not in targets:
                             targets["RETIFICADOR/BATERIAS"] = page_num
                         elif "Banco de baterias" in text and "BANCO DE BATERIAS" not in targets:
                             targets["BANCO DE BATERIAS"] = page_num
@@ -613,13 +798,14 @@ def run():
                     for titulo, pagina_destino in targets.items():
 
                         for bbox in index_page.search_for(titulo):
-   
+
                             index_page.insert_link({
                                 "kind": fitz.LINK_GOTO,
                                 "from": bbox,
                                 "page": pagina_destino,
                                 "zoom": 0
                             })
+
 
                         for xxx_rect in index_page.search_for("XXX"):
 
@@ -640,7 +826,6 @@ def run():
                                 )
 
                                 break
-
 
                     total_paginas = len(pdf_temp)
 
@@ -870,6 +1055,7 @@ Código dos serviços padronizados:
 
 
         mostrar_preview_pdf(pdf_para_baixar)
+
 
     st.markdown("---")
     if st.button("🔄 Reiniciar / Limpar sessão", key="btn_clear"):
